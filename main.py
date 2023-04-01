@@ -2,7 +2,7 @@ import pygame
 import keyboard
 import sys
 import random
-import time
+from os import path
 
 running = True
 
@@ -17,6 +17,9 @@ WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
+
+# Определение файлов игры
+imgDir = path.join(path.dirname(__file__), 'img')
 
 # объект игрока
 class Player(pygame.sprite.Sprite):
@@ -110,6 +113,11 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Space Invaders by Yaroslav")
 clock = pygame.time.Clock()
 
+# Загрузка файлов графики
+background = pygame.image.load('img/blue.png')
+background = pygame.transform.scale(background, (WIDTH, HEIGHT))
+backgroundRect = background.get_rect()
+
 # спрайты
 all_sprites = pygame.sprite.Group()
 enemies = pygame.sprite.Group()
@@ -130,12 +138,8 @@ while running:
         key = pygame.key.get_pressed()
         if event.type == pygame.QUIT or key[pygame.K_ESCAPE]:
             running = False
-        #elif key[pygame.K_SPACE]:
-        #   player.shoot()
-
-    for _ in range(10):
-        player.shoot()
-        time.sleep(1)
+        elif key[pygame.K_SPACE]:
+          player.shoot()
 
     # обновление спрайтов
     all_sprites.update()
@@ -145,8 +149,15 @@ while running:
     if hits:
         running = False
 
+    shootHits = pygame.sprite.groupcollide(enemies, bullets, True, True)
+    for shootHit in shootHits:
+        e = Enemy()
+        all_sprites.add(e)
+        enemies.add(e)
+
     # заполнение (рендеринг) экрана
     screen.fill(BLACK)
+    screen.blit(background, backgroundRect)
     all_sprites.draw(screen)
 
     # показываем экран после отрисовки
