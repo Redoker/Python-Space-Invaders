@@ -25,9 +25,9 @@ imgDir = path.join(path.dirname(__file__), 'img')
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((25, 25))
-        self.image.fill(GREEN)
+        self.image = playerImg
         self.rect = self.image.get_rect()
+        self.radius = 20
         self.rect.bottom = (HEIGHT - 50)
         self.rect.centerx = (WIDTH / 2)
 
@@ -68,16 +68,21 @@ class Player(pygame.sprite.Sprite):
 class Enemy(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        # размер врага
-        self.image = pygame.Surface((40, 30))
-        self.image.fill(RED)
+        # спрайт врага
+        self.imageOrig = random.choice(meteorImages)
+        self.image = self.imageOrig.copy()
         self.rect = self.image.get_rect()
+        self.radius = int(self.rect.width * .85 / 2)
         self.rect.x = random.randrange(WIDTH - self.rect.width)
         self.rect.y = random.randrange(-100, -40)
         self.speedy = random.randrange(1, 8)
         self.speedx = random.randrange(-3, 3)
+        self.rot = 0
+        self.rotSpeed = random.randrange(-9, 9)
+        self.lastUpdate = pygame.time.get_ticks()
 
     def update(self):
+        self.rotate()
         self.rect.x += self.speedx
         self.rect.y += self.speedy
 
@@ -87,14 +92,25 @@ class Enemy(pygame.sprite.Sprite):
         if self.rect.top > HEIGHT + 10:
             self.rect.x = random.randrange(WIDTH - self.rect.width)
             self.rect.y = random.randrange(-100, -40)
-            self.speedy = random.randrange(1, 8)
+            self.speedy = random.randrange(1, 10)
+
+    # вращение астероида
+    def rotate(self):
+        now = pygame.time.get_ticks()
+        if now - self.lastUpdate > 50:
+            self.lastUpdate = now
+            self.rot = (self.rot + self.rotSpeed) % 360
+            new_image = pygame.transform.rotate(self.imageOrig, self.rot)
+            oldCenter = self.rect.center
+            self.image = new_image
+            self.rect = self.image.get_rect()
+            self.rect.center = oldCenter
 
 # объект пули
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((10, 20))
-        self.image.fill(WHITE)
+        self.image = bulletImg
         self.rect = self.image.get_rect()
         self.rect.bottom = y
         self.rect.centerx = x
@@ -114,9 +130,21 @@ pygame.display.set_caption("Space Invaders by Yaroslav")
 clock = pygame.time.Clock()
 
 # Загрузка файлов графики
-background = pygame.image.load('img/blue.png')
+background = pygame.image.load('img/Backgrounds/blue.png')
 background = pygame.transform.scale(background, (WIDTH, HEIGHT))
 backgroundRect = background.get_rect()
+playerImg = pygame.image.load('img/player/playerShip3_green.png')
+playerImg = pygame.transform.scale(playerImg, (50, 45))
+bulletImg = pygame.image.load('img/player/laserRed05.png')
+meteorImages = []
+meteorList = ['meteorBrown_big2.png', 'meteorBrown_med1.png',
+              'meteorBrown_med3.png', 'meteorBrown_small1.png',
+              'meteorBrown_small2.png', 'meteorBrown_tiny2.png',
+              'meteorGrey_big4.png', 'meteorGrey_med1.png',
+              'meteorGrey_med2.png', 'meteorGrey_small1.png',
+              'meteorGrey_small2.png', 'meteorGrey_tiny1.png']
+for img in meteorList:
+    meteorImages.append(pygame.image.load('img/enemy/' + img))
 
 # спрайты
 all_sprites = pygame.sprite.Group()
@@ -124,7 +152,7 @@ enemies = pygame.sprite.Group()
 player = Player()
 all_sprites.add(player)
 bullets = pygame.sprite.Group()
-for i in range(8):
+for i in range(15):
     e = Enemy()
     all_sprites.add(e)
     enemies.add(e)
@@ -145,10 +173,11 @@ while running:
     all_sprites.update()
 
     # проверка попадания
-    hits = pygame.sprite.spritecollide(player, enemies, False)
+    hits = pygame.sprite.spritecollide(player, enemies, False, pygame.sprite.collide_circle)
     if hits:
         running = False
 
+    # проверка попадания выстрело
     shootHits = pygame.sprite.groupcollide(enemies, bullets, True, True)
     for shootHit in shootHits:
         e = Enemy()
